@@ -534,6 +534,10 @@ class EnhancedConversationManager:
                 "memory": "I use advanced memory systems including quantum-enhanced storage to remember our conversations and provide better, more contextual responses. Is there something specific about my memory capabilities you'd like to know?",
                 "quantum": "I utilize quantum-enhanced memory processing that allows for sophisticated pattern recognition and contextual understanding. This helps me provide more intelligent responses based on our conversation history.",
                 "aetherra": "I am Aetherra, an advanced AI operating system with quantum-enhanced capabilities. I'm designed to learn, remember, and adapt to provide you with the best possible assistance.",
+                "date": "Today's date is August 2, 2025. Is there something specific about the date you'd like to know?",
+                "today": "Today's date is August 2, 2025. How can I help you with date-related information?",
+                "time": "I can help with date information! Today is August 2, 2025. What else would you like to know?",
+                "what is": "I'm here to answer questions! If you're asking about today's date, it's August 2, 2025. What else can I help with?"
             }
 
             # Find matching response

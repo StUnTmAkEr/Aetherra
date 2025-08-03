@@ -622,12 +622,26 @@ def handle_toggle_command(data):
 def handle_get_current_settings():
     """Get current bot settings"""
     try:
+        # Helper function to mask credentials for display
+        def mask_credential(value, show_length=4):
+            if not value:
+                return ""
+            if len(value) <= show_length:
+                return "*" * len(value)
+            return value[:show_length] + "*" * (len(value) - show_length)
+        
         settings = {
-            'channel': config.CHANNEL,
-            'username': config.BOT_USERNAME,
-            'command_prefix': config.COMMAND_PREFIX,
+            'channel': config.CHANNEL or "",
+            'username': config.BOT_USERNAME or "",
+            'command_prefix': config.COMMAND_PREFIX or "!",
             'ai_responses': config.ENABLE_AI_RESPONSES,
             'response_chance': config.AI_RESPONSE_CHANCE,
+            # Send masked credential values for display
+            'client_id': mask_credential(config.CLIENT_ID),
+            'client_secret': mask_credential(config.CLIENT_SECRET),
+            'access_token': mask_credential(config.ACCESS_TOKEN),
+            'refresh_token': mask_credential(config.REFRESH_TOKEN),
+            # Also send boolean flags for status indicators
             'has_access_token': bool(config.ACCESS_TOKEN),
             'has_refresh_token': bool(config.REFRESH_TOKEN),
             'has_client_id': bool(config.CLIENT_ID),

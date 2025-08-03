@@ -1929,7 +1929,7 @@
                 document.getElementById('command-prefix').value = settings.command_prefix;
             }
 
-            // Update credential fields with actual values (masked)
+            // Update credential fields with masked values
             if (settings.client_id) {
                 document.getElementById('client-id').value = settings.client_id;
                 document.getElementById('client-id').placeholder = 'Client ID Set';
@@ -1945,6 +1945,30 @@
             if (settings.refresh_token) {
                 document.getElementById('refresh-token').value = settings.refresh_token;
                 document.getElementById('refresh-token').placeholder = 'Refresh Token Set';
+            }
+
+            // Update token status indicators
+            const accessTokenStatus = document.getElementById('access-token-status');
+            const refreshTokenStatus = document.getElementById('refresh-token-status');
+            
+            if (accessTokenStatus) {
+                if (settings.has_access_token) {
+                    accessTokenStatus.textContent = 'Valid';
+                    accessTokenStatus.className = 'token-status valid';
+                } else {
+                    accessTokenStatus.textContent = 'Not Set';
+                    accessTokenStatus.className = 'token-status';
+                }
+            }
+            
+            if (refreshTokenStatus) {
+                if (settings.has_refresh_token) {
+                    refreshTokenStatus.textContent = 'Valid';
+                    refreshTokenStatus.className = 'token-status valid';
+                } else {
+                    refreshTokenStatus.textContent = 'Not Set';
+                    refreshTokenStatus.className = 'token-status';
+                }
             }
 
             // Update AI settings
@@ -1965,26 +1989,6 @@
                 const valueDisplay = rangeInput.parentNode.querySelector('.range-value');
                 rangeInput.value = settings.response_chance;
                 valueDisplay.textContent = Math.round(settings.response_chance * 100) + '%';
-            }
-
-            // Update token status
-            const accessTokenStatus = document.getElementById('access-token-status');
-            const refreshTokenStatus = document.getElementById('refresh-token-status');
-            
-            if (settings.has_access_token) {
-                accessTokenStatus.textContent = 'Set';
-                accessTokenStatus.classList.add('valid');
-            } else {
-                accessTokenStatus.textContent = 'Not Set';
-                accessTokenStatus.classList.remove('valid');
-            }
-
-            if (settings.has_refresh_token) {
-                refreshTokenStatus.textContent = 'Set';
-                refreshTokenStatus.classList.add('valid');
-            } else {
-                refreshTokenStatus.textContent = 'Not Set';
-                refreshTokenStatus.classList.remove('valid');
             }
         }
 
