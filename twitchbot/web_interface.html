@@ -1,0 +1,1999 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 Aetherra Twitch Bot Control Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a1a;
+            color: #00ff9f;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            min-height: 100vh;
+            gap: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            border: 2px solid #00ff9f;
+            background: rgba(0, 255, 159, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 255, 159, 0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            text-shadow: 0 0 10px #00ff9f;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #00ffff;
+            font-size: 1.1em;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .bot-status {
+            background: rgba(0, 30, 20, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+        }
+
+        .tab-navigation {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 0;
+        }
+
+        .tab-btn {
+            background: rgba(0, 255, 159, 0.2);
+            border: 1px solid #00ff9f;
+            color: #00ff9f;
+            padding: 12px 24px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 1em;
+            text-transform: uppercase;
+            border-bottom: none;
+        }
+
+        .tab-btn:hover {
+            background: rgba(0, 255, 159, 0.3);
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 255, 159, 0.4);
+            color: #000;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            height: 100%;
+            background: rgba(0, 30, 20, 0.4);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+            height: 100%;
+            grid-column: 1 / -1;
+        }
+
+        .tab-content.active {
+            display: grid;
+        }
+
+        #chat-tab.active {
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+
+        #commands-tab.active {
+            grid-template-columns: 1fr;
+        }
+
+        .chat-section {
+            display: grid;
+            grid-template-rows: 1fr;
+            gap: 15px;
+            height: 100%;
+        }
+
+        .commands-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .commands-section.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .commands-container {
+            background: rgba(0, 30, 20, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .commands-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 159, 0.3);
+        }
+
+        .commands-header h3 {
+            color: #00ffff;
+            text-transform: uppercase;
+            font-size: 1.2em;
+            text-shadow: 0 0 5px #00ffff;
+            margin: 0;
+        }
+
+        .commands-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .command-item {
+            background: rgba(0, 255, 159, 0.1);
+            border: 1px solid rgba(0, 255, 159, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .command-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .command-name {
+            font-weight: bold;
+            color: #00ffff;
+            font-size: 1.1em;
+        }
+
+        .command-response {
+            color: #00ff9f;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .command-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 6px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            border: 1px solid;
+        }
+
+        .edit-btn {
+            background: rgba(0, 255, 255, 0.2);
+            border-color: #00ffff;
+            color: #00ffff;
+        }
+
+        .edit-btn:hover {
+            background: rgba(0, 255, 255, 0.4);
+        }
+
+        .delete-btn {
+            background: rgba(255, 68, 68, 0.2);
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 68, 68, 0.4);
+        }
+
+        /* Toggle Switch Styles */
+        .command-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 15px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: rgba(255, 68, 68, 0.3);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid #ff4444;
+        }
+
+        .toggle-switch.enabled {
+            background: rgba(0, 255, 155, 0.3);
+            border-color: #00ff9b;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff4444;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-switch.enabled .toggle-slider {
+            background: #00ff9b;
+            transform: translateX(24px);
+        }
+
+        .toggle-label {
+            font-size: 0.8em;
+            color: #ff4444;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .toggle-switch.enabled + .toggle-label {
+            color: #00ff9b;
+        }
+
+        .command-item.disabled {
+            opacity: 0.5;
+        }
+
+        .command-item.disabled .command-name {
+            color: #666;
+        }
+
+        .command-item.disabled .command-response {
+            color: #444;
+        }
+
+        .command-editor {
+            background: rgba(0, 30, 20, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 8px;
+            padding: 20px;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            max-width: 90vw;
+            z-index: 1000;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 255, 159, 0.3);
+        }
+
+        .editor-header h3 {
+            color: #00ffff;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .close-btn {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+
+        .editor-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .editor-form label {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            color: #00ff9f;
+            font-size: 0.9em;
+        }
+
+        .editor-form input[type="text"], .editor-form textarea {
+            background: rgba(0, 20, 15, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 5px;
+            padding: 10px;
+            color: #00ff9f;
+            font-family: inherit;
+            font-size: 1em;
+        }
+
+        .editor-form input[type="text"]:focus, .editor-form textarea:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .editor-form input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .editor-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+
+        .control-btn.secondary {
+            background: rgba(128, 128, 128, 0.2);
+            border-color: #888;
+            color: #888;
+        }
+
+        .control-btn.secondary:hover {
+            background: rgba(128, 128, 128, 0.4);
+        }
+
+        /* Settings Styles */
+        .settings-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .settings-container {
+            background: rgba(0, 30, 20, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 159, 0.3);
+        }
+
+        .settings-header h3 {
+            color: #00ffff;
+            text-transform: uppercase;
+            font-size: 1.3em;
+            text-shadow: 0 0 5px #00ffff;
+            margin: 0;
+        }
+
+        .settings-group {
+            background: rgba(0, 255, 159, 0.05);
+            border: 1px solid rgba(0, 255, 159, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .settings-group h4 {
+            color: #00ffff;
+            text-transform: uppercase;
+            font-size: 1.1em;
+            margin: 0 0 15px 0;
+            text-shadow: 0 0 3px #00ffff;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+            padding-bottom: 8px;
+        }
+
+        .setting-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 20, 15, 0.3);
+            border-radius: 5px;
+            border: 1px solid rgba(0, 255, 159, 0.1);
+        }
+
+        .setting-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .setting-item label {
+            color: #00ff9f;
+            font-size: 0.95em;
+            min-width: 150px;
+            font-weight: bold;
+        }
+
+        .setting-input {
+            background: rgba(0, 20, 15, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 4px;
+            padding: 8px 12px;
+            color: #00ff9f;
+            font-family: inherit;
+            font-size: 0.9em;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .setting-input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
+        }
+
+        .setting-input.short-input {
+            max-width: 60px;
+            text-align: center;
+        }
+
+        .setting-btn {
+            background: rgba(0, 255, 159, 0.2);
+            border: 1px solid #00ff9f;
+            color: #00ff9f;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .setting-btn:hover {
+            background: rgba(0, 255, 159, 0.4);
+            box-shadow: 0 0 8px rgba(0, 255, 159, 0.3);
+        }
+
+        .credential-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .credential-input {
+            flex: 1;
+        }
+
+        .show-btn {
+            background: rgba(0, 255, 255, 0.2);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9em;
+            min-width: 40px;
+        }
+
+        .show-btn:hover {
+            background: rgba(0, 255, 255, 0.4);
+        }
+
+        .token-status {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .token-status.valid {
+            background: rgba(0, 255, 159, 0.2);
+            border-color: #00ff9f;
+            color: #00ff9f;
+        }
+
+        .credentials-info {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+
+        .credentials-info p {
+            margin: 0;
+            color: #00ffff;
+            font-size: 0.9em;
+        }
+
+        .settings-link {
+            color: #00ff9f;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .settings-link:hover {
+            color: #00ffff;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .toggle-setting {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .range-setting {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .range-input {
+            flex: 1;
+            max-width: 200px;
+            height: 20px;
+            background: rgba(0, 20, 15, 0.8);
+            border-radius: 10px;
+            outline: none;
+            appearance: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #00ff9f;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 255, 159, 0.5);
+        }
+
+        .range-input::-webkit-slider-track {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(0, 255, 159, 0.3);
+        }
+
+        .range-value {
+            color: #00ffff;
+            font-weight: bold;
+            min-width: 40px;
+            text-align: center;
+            background: rgba(0, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+        }
+
+        .oauth-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 255, 159, 0.3);
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(0, 255, 159, 0.3);
+        }
+
+        .bot-status {
+            background: rgba(0, 30, 20, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(0, 255, 159, 0.1);
+            border-radius: 5px;
+            border: 1px solid rgba(0, 255, 159, 0.3);
+        }
+
+        .status-value {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #00ffff;
+        }
+
+        .status-label {
+            font-size: 0.8em;
+            color: #00ff9f;
+            margin-top: 5px;
+        }
+
+        .chat-container {
+            background: rgba(0, 30, 20, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+        }
+
+        .chat-display {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .chat-header {
+            color: #00ffff;
+            font-size: 1.2em;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            text-shadow: 0 0 5px #00ffff;
+            border-bottom: 1px solid rgba(0, 255, 159, 0.3);
+            padding-bottom: 10px;
+        }
+
+        .chat-message {
+            margin: 8px 0;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border-left: 3px solid;
+            word-wrap: break-word;
+        }
+
+        .msg-user {
+            background: rgba(0, 255, 159, 0.1);
+            border-left-color: #00ff9f;
+        }
+
+        .msg-bot {
+            background: rgba(0, 255, 255, 0.1);
+            border-left-color: #00ffff;
+        }
+
+        .msg-system {
+            background: rgba(255, 170, 0, 0.1);
+            border-left-color: #ffaa00;
+            font-style: italic;
+        }
+
+        .msg-error {
+            background: rgba(255, 68, 68, 0.1);
+            border-left-color: #ff4444;
+        }
+
+        .message-sender {
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .message-time {
+            font-size: 0.8em;
+            color: rgba(0, 255, 159, 0.6);
+            float: right;
+        }
+
+        .chat-input {
+            border-top: 1px solid rgba(0, 255, 159, 0.3);
+            padding: 15px 20px;
+            background: rgba(0, 20, 15, 0.5);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input input {
+            background: rgba(0, 20, 15, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 5px;
+            padding: 12px;
+            color: #00ff9f;
+            font-family: inherit;
+            font-size: 1em;
+            width: 100%;
+        }
+
+        .chat-input input:focus {
+            outline: none;
+            border-color: #00ffff;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .send-btn {
+            background: rgba(0, 255, 159, 0.2);
+            border: 1px solid #00ff9f;
+            color: #00ff9f;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            font-size: 1em;
+            text-transform: uppercase;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background: rgba(0, 255, 159, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.5);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-panel {
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+
+        .panel {
+            background: rgba(0, 30, 20, 0.8);
+            border: 1px solid #00ff9f;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 159, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: #00ffff;
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+        }
+
+        .panel h3 {
+            color: #00ffff;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            font-size: 1.2em;
+            text-shadow: 0 0 5px #00ffff;
+        }
+
+        .bot-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .control-btn {
+            background: rgba(0, 255, 159, 0.2);
+            border: 1px solid #00ff9f;
+            color: #00ff9f;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+
+        .control-btn:hover:not(:disabled) {
+            background: rgba(0, 255, 159, 0.4);
+            box-shadow: 0 0 10px rgba(0, 255, 159, 0.5);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .control-btn.active {
+            background: rgba(0, 255, 159, 0.6);
+            color: #000;
+        }
+
+        .terminal {
+            background: #000;
+            border: 1px solid #00ff9f;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .terminal-line {
+            margin: 2px 0;
+            color: #00ff9f;
+        }
+
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+            
+            #chat-tab.active {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+            
+            #commands-tab.active {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .command-editor {
+                width: 95vw;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AETHERRA TWITCH BOT</h1>
+            <p class="subtitle">Neural Interface Control Panel</p>
+        </div>
+
+        <div class="main-grid">
+            <!-- Bot Status (Full Width) -->
+            <div class="bot-status">
+                <h3>🔧 Bot Status</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-value" id="backend-status">DISCONNECTED</div>
+                        <div class="status-label">Backend</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="bot-status">OFFLINE</div>
+                        <div class="status-label">Twitch</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="chat-channel">#-</div>
+                        <div class="status-label">Channel</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="messages-sent">0</div>
+                        <div class="status-label">Messages</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="ai-status">INACTIVE</div>
+                        <div class="status-label">AI Engine</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="active-users">0</div>
+                        <div class="status-label">Active Users</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('chat')">💬 Chat</button>
+                <button class="tab-btn" onclick="switchTab('commands')">⚡ Commands</button>
+                <button class="tab-btn" onclick="switchTab('settings')">⚙️ Settings</button>
+            </div>
+
+            <!-- Content Area -->
+            <div class="content-grid">
+                <!-- Chat Tab Content -->
+                <div id="chat-tab" class="tab-content active">
+                    <div class="chat-section">
+                        <!-- Live Chat Window -->
+                        <div class="chat-container">
+                            <div class="chat-display">
+                                <div class="chat-header">💬 Live Twitch Chat</div>
+                                <div id="chat-messages">
+                                    <div class="chat-message msg-system">
+                                        <span class="message-time">--:--:--</span>
+                                        <span class="message-sender">[SYSTEM]</span>
+                                        Waiting for bot connection...
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Chat Input -->
+                            <div class="chat-input">
+                                <div class="input-grid">
+                                    <input type="text" id="message-input" placeholder="Type message to send to Twitch chat..." disabled>
+                                    <button class="send-btn" id="send-button" onclick="sendMessage()" disabled>SEND</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-panel">
+                        <!-- Bot Controls -->
+                        <div class="panel">
+                            <h3>🎮 Bot Controls</h3>
+                            <div class="bot-controls">
+                                <button class="control-btn" id="start-btn" onclick="startBot()">START BOT</button>
+                                <button class="control-btn" id="stop-btn" onclick="stopBot()" disabled>STOP BOT</button>
+                                <button class="control-btn" onclick="restartBot()">RESTART</button>
+                                <button class="control-btn" onclick="getStatus()">STATUS</button>
+                            </div>
+                            <div class="terminal" id="control-terminal">
+                                <div class="terminal-line">🤖 Aetherra Bot Control Terminal Ready</div>
+                                <div class="terminal-line">Use controls above to manage bot...</div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Features -->
+                        <div class="panel">
+                            <h3>⚡ Advanced Features</h3>
+                            <div class="bot-controls">
+                                <button class="control-btn" onclick="exportChat()">EXPORT</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commands Tab Content -->
+                <div id="commands-tab" class="tab-content">
+                    <div class="commands-section full-width">
+                        <!-- Command List -->
+                        <div class="commands-container">
+                            <div class="commands-header">
+                                <h3>⚡ Bot Commands</h3>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="control-btn" onclick="refreshCommandsList(true)">🔄 REFRESH</button>
+                                    <button class="control-btn" onclick="addNewCommand()">+ ADD COMMAND</button>
+                                </div>
+                            </div>
+                            <div class="commands-list" id="commands-list">
+                                <div class="command-item">
+                                    <div class="command-info">
+                                        <span class="command-name">!hello</span>
+                                        <span class="command-response">Hello there! Welcome to the stream!</span>
+                                    </div>
+                                    <div class="command-actions">
+                                        <button class="edit-btn" onclick="editCommand('hello')">EDIT</button>
+                                        <button class="delete-btn" onclick="deleteCommand('hello')">DELETE</button>
+                                    </div>
+                                </div>
+                                <div class="command-item">
+                                    <div class="command-info">
+                                        <span class="command-name">!help</span>
+                                        <span class="command-response">Available commands: !hello, !help, !status, !ping</span>
+                                    </div>
+                                    <div class="command-actions">
+                                        <button class="edit-btn" onclick="editCommand('help')">EDIT</button>
+                                        <button class="delete-btn" onclick="deleteCommand('help')">DELETE</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Command Editor -->
+                        <div class="command-editor" id="command-editor" style="display: none;">
+                            <div class="editor-header">
+                                <h3 id="editor-title">Add New Command</h3>
+                                <button class="close-btn" onclick="closeCommandEditor()">✕</button>
+                            </div>
+                            <div class="editor-form">
+                                <label>
+                                    Command Name:
+                                    <input type="text" id="command-name" placeholder="!example" maxlength="50">
+                                </label>
+                                <label>
+                                    Response:
+                                    <textarea id="command-response" placeholder="Enter the bot's response..." rows="4" maxlength="500"></textarea>
+                                </label>
+                                <label>
+                                    <input type="checkbox" id="command-enabled" checked>
+                                    Command Enabled
+                                </label>
+                                <div class="editor-actions">
+                                    <button class="control-btn" onclick="saveCommand()">SAVE</button>
+                                    <button class="control-btn secondary" onclick="closeCommandEditor()">CANCEL</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab Content -->
+                <div id="settings-tab" class="tab-content">
+                    <div class="settings-section full-width">
+                        <!-- Settings Container -->
+                        <div class="settings-container">
+                            <div class="settings-header">
+                                <h3>⚙️ Bot Configuration</h3>
+                                <button class="control-btn" onclick="loadCurrentSettings()">🔄 REFRESH</button>
+                            </div>
+                            
+                            <!-- Twitch Connection Settings -->
+                            <div class="settings-group">
+                                <h4>🔗 Twitch Connection</h4>
+                                <div class="setting-item">
+                                    <label for="twitch-channel">Channel Name:</label>
+                                    <input type="text" id="twitch-channel" placeholder="Enter channel name (without #)" class="setting-input">
+                                    <button class="setting-btn" onclick="updateSetting('channel', document.getElementById('twitch-channel').value)">UPDATE</button>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="bot-username">Bot Username:</label>
+                                    <input type="text" id="bot-username" placeholder="Enter bot username" class="setting-input">
+                                    <button class="setting-btn" onclick="updateSetting('username', document.getElementById('bot-username').value)">UPDATE</button>
+                                </div>
+                            </div>
+
+                            <!-- Twitch App Credentials -->
+                            <div class="settings-group">
+                                <h4>🔑 Twitch App Credentials</h4>
+                                <div class="credentials-info">
+                                    <p>Get these from <a href="https://dev.twitch.tv/console/apps" target="_blank" class="settings-link">Twitch Developer Console</a></p>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="client-id">Client ID:</label>
+                                    <div class="credential-input-group">
+                                        <input type="password" id="client-id" placeholder="Enter Twitch Client ID" class="setting-input credential-input">
+                                        <button class="show-btn" onclick="toggleCredentialVisibility('client-id')">👁️</button>
+                                        <button class="setting-btn" onclick="updateCredential('client_id', document.getElementById('client-id').value)">UPDATE</button>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="client-secret">Client Secret:</label>
+                                    <div class="credential-input-group">
+                                        <input type="password" id="client-secret" placeholder="Enter Twitch Client Secret" class="setting-input credential-input">
+                                        <button class="show-btn" onclick="toggleCredentialVisibility('client-secret')">👁️</button>
+                                        <button class="setting-btn" onclick="updateCredential('client_secret', document.getElementById('client-secret').value)">UPDATE</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- OAuth Tokens -->
+                            <div class="settings-group">
+                                <h4>🎟️ OAuth Tokens</h4>
+                                <div class="credentials-info">
+                                    <p>These are generated automatically through OAuth. Use the OAuth Helper if needed.</p>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="access-token">Access Token:</label>
+                                    <div class="credential-input-group">
+                                        <input type="password" id="access-token" placeholder="OAuth Access Token" class="setting-input credential-input" readonly>
+                                        <button class="show-btn" onclick="toggleCredentialVisibility('access-token')">👁️</button>
+                                        <span class="token-status" id="access-token-status">Not Set</span>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="refresh-token">Refresh Token:</label>
+                                    <div class="credential-input-group">
+                                        <input type="password" id="refresh-token" placeholder="OAuth Refresh Token" class="setting-input credential-input" readonly>
+                                        <button class="show-btn" onclick="toggleCredentialVisibility('refresh-token')">👁️</button>
+                                        <span class="token-status" id="refresh-token-status">Not Set</span>
+                                    </div>
+                                </div>
+                                <div class="oauth-actions">
+                                    <button class="control-btn" onclick="startOAuthFlow()">🔑 START OAUTH</button>
+                                    <button class="control-btn secondary" onclick="testTokens()">🧪 TEST TOKENS</button>
+                                </div>
+                            </div>
+
+                            <!-- Bot Behavior Settings -->
+                            <div class="settings-group">
+                                <h4>🤖 Bot Behavior</h4>
+                                <div class="setting-item">
+                                    <label for="ai-responses">Enable AI Responses:</label>
+                                    <div class="toggle-setting">
+                                        <div class="toggle-switch" id="ai-responses-toggle" onclick="toggleAISetting('ai-responses')">
+                                            <div class="toggle-slider"></div>
+                                        </div>
+                                        <span class="toggle-label">OFF</span>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="response-chance">AI Response Chance:</label>
+                                    <div class="range-setting">
+                                        <input type="range" id="response-chance" min="0" max="1" step="0.1" value="0.3" class="range-input" onchange="updateAISetting('response_chance', this.value)">
+                                        <span class="range-value">30%</span>
+                                    </div>
+                                </div>
+                                <div class="setting-item">
+                                    <label for="command-prefix">Command Prefix:</label>
+                                    <input type="text" id="command-prefix" value="!" maxlength="1" class="setting-input short-input">
+                                    <button class="setting-btn" onclick="updateSetting('command_prefix', document.getElementById('command-prefix').value)">UPDATE</button>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="settings-actions">
+                                <button class="control-btn" onclick="saveAllSettings()">💾 SAVE ALL</button>
+                                <button class="control-btn secondary" onclick="resetSettings()">🔄 RESET</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let socket = null;
+        let isConnected = false;
+        let botRunning = false;
+        let messageCount = 0;
+        let chatMessages = [];
+        let currentEditingCommand = null;
+        let botCommands = {
+            'hello': 'Hello there! Welcome to the stream!',
+            'help': 'Available commands: !hello, !help, !status, !ping',
+            'status': 'Bot is running and ready to chat!',
+            'ping': 'Pong! Bot is responsive.'
+        };
+        let commandEnabled = {
+            'hello': true,
+            'help': true,
+            'status': true,
+            'ping': true
+        };
+
+        // Tab Management
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to clicked button
+            event.target.classList.add('active');
+            
+            // Refresh commands list if switching to commands tab
+            if (tabName === 'commands') {
+                refreshCommandsList();
+            }
+            
+            // Load settings if switching to settings tab
+            if (tabName === 'settings') {
+                loadCurrentSettings();
+            }
+        }
+
+        // Command Management
+        function refreshCommandsList(forceRefresh = false) {
+            if (forceRefresh && isConnected) {
+                // Request fresh data from server
+                addTerminalLine('🔄 Refreshing commands from server...');
+                socket.emit('get_commands');
+                return;
+            }
+            
+            const commandsList = document.getElementById('commands-list');
+            commandsList.innerHTML = '';
+            
+            if (Object.keys(botCommands).length === 0) {
+                commandsList.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">No commands available. Click "ADD COMMAND" to create one.</div>';
+                return;
+            }
+            
+            Object.entries(botCommands).forEach(([command, response]) => {
+                const isEnabled = commandEnabled[command] !== false; // Default to true if not specified
+                const commandItem = document.createElement('div');
+                commandItem.className = `command-item ${isEnabled ? '' : 'disabled'}`;
+                commandItem.innerHTML = `
+                    <div class="command-info">
+                        <span class="command-name">!${command}</span>
+                        <span class="command-response">${response}</span>
+                    </div>
+                    <div class="command-actions">
+                        <div class="command-toggle-container">
+                            <div class="toggle-switch ${isEnabled ? 'enabled' : ''}" onclick="toggleCommand('${command}')">
+                                <div class="toggle-slider"></div>
+                            </div>
+                            <span class="toggle-label">${isEnabled ? 'ON' : 'OFF'}</span>
+                        </div>
+                        <button class="edit-btn" onclick="editCommand('${command}')">EDIT</button>
+                        <button class="delete-btn" onclick="deleteCommand('${command}')">DELETE</button>
+                    </div>
+                `;
+                commandsList.appendChild(commandItem);
+            });
+        }
+
+        function addNewCommand() {
+            currentEditingCommand = null;
+            document.getElementById('editor-title').textContent = 'Add New Command';
+            document.getElementById('command-name').value = '';
+            document.getElementById('command-response').value = '';
+            document.getElementById('command-enabled').checked = true;
+            document.getElementById('command-editor').style.display = 'block';
+        }
+
+        function toggleCommand(commandName) {
+            const currentEnabled = commandEnabled[commandName] !== false;
+            const newEnabled = !currentEnabled;
+            
+            // Send toggle request to server first
+            if (isConnected) {
+                addTerminalLine(`🔄 Toggling command !${commandName} ${newEnabled ? 'on' : 'off'}...`);
+                socket.emit('toggle_command', {
+                    name: commandName,
+                    enabled: newEnabled
+                });
+            }
+            
+            // Update local state immediately for responsive UI
+            commandEnabled[commandName] = newEnabled;
+            refreshCommandsList();
+        }
+
+        function editCommand(commandName) {
+            currentEditingCommand = commandName;
+            document.getElementById('editor-title').textContent = 'Edit Command';
+            document.getElementById('command-name').value = '!' + commandName;
+            document.getElementById('command-response').value = botCommands[commandName];
+            document.getElementById('command-enabled').checked = commandEnabled[commandName] !== false;
+            document.getElementById('command-editor').style.display = 'block';
+        }
+
+        function deleteCommand(commandName) {
+            if (confirm(`Are you sure you want to delete the !${commandName} command?`)) {
+                // Send delete request to server first
+                if (isConnected) {
+                    addTerminalLine(`🗑️ Deleting command: !${commandName}...`);
+                    socket.emit('delete_command', {name: commandName});
+                    
+                    // Optimistically update local state for immediate feedback
+                    delete botCommands[commandName];
+                    delete commandEnabled[commandName];
+                    refreshCommandsList();
+                } else {
+                    // If not connected, just update local state
+                    delete botCommands[commandName];
+                    delete commandEnabled[commandName];
+                    refreshCommandsList();
+                    addTerminalLine(`🗑️ Deleted command locally: !${commandName} (offline)`);
+                }
+            }
+        }
+
+        function saveCommand() {
+            const nameInput = document.getElementById('command-name');
+            const responseInput = document.getElementById('command-response');
+            const enabledInput = document.getElementById('command-enabled');
+            
+            let commandName = nameInput.value.trim();
+            const commandResponse = responseInput.value.trim();
+            const commandEnabledState = enabledInput.checked;
+            
+            if (!commandName || !commandResponse) {
+                alert('Please fill in both command name and response.');
+                return;
+            }
+            
+            // Remove ! prefix if present
+            if (commandName.startsWith('!')) {
+                commandName = commandName.substring(1);
+            }
+            
+            // Validate command name
+            if (!/^[a-zA-Z0-9_]+$/.test(commandName)) {
+                alert('Command name can only contain letters, numbers, and underscores.');
+                return;
+            }
+            
+            const action = currentEditingCommand ? 'Updated' : 'Added';
+            
+            // Send to server first
+            if (isConnected) {
+                addTerminalLine(`💾 Saving command: !${commandName}...`);
+                socket.emit('save_command', {
+                    name: commandName,
+                    response: commandResponse,
+                    description: `Custom command: ${commandName}`,
+                    enabled: commandEnabledState
+                });
+            } else {
+                // If offline, update local state only
+                botCommands[commandName] = commandResponse;
+                commandEnabled[commandName] = commandEnabledState;
+                addTerminalLine(`💾 ${action} command locally: !${commandName} (offline)`);
+                refreshCommandsList();
+            }
+            
+            closeCommandEditor();
+        }
+
+        function closeCommandEditor() {
+            document.getElementById('command-editor').style.display = 'none';
+            currentEditingCommand = null;
+        }
+
+        // Initialize connection
+        function initializeConnection() {
+            try {
+                console.log('🔄 Attempting to connect to Socket.IO server...');
+                socket = io();
+                console.log('✅ Socket.IO instance created');
+                setupSocketListeners();
+            } catch (error) {
+                console.error('❌ Socket connection error:', error);
+                addTerminalLine('❌ Failed to connect to server');
+                console.error('Socket connection error:', error);
+            }
+        }
+
+        function setupSocketListeners() {
+            console.log('🔄 Setting up socket listeners...');
+            
+            socket.on('connect', function() {
+                console.log('✅ Socket connected successfully');
+                isConnected = true;
+                updateConnectionStatus(true);
+                addTerminalLine('🔗 Connected to Aetherra Neural Interface');
+                addChatMessage('SYSTEM', 'Connected to bot control system', 'system');
+                requestBotStatus();
+                requestBotCommands(); // Request current commands from bot
+            });
+
+            socket.on('disconnect', function() {
+                console.log('❌ Socket disconnected');
+                isConnected = false;
+                updateConnectionStatus(false);
+                addTerminalLine('❌ Disconnected from server');
+                addChatMessage('SYSTEM', 'Disconnected from bot control system', 'error');
+            });
+
+            socket.on('connect_error', function(error) {
+                console.error('❌ Socket connection error:', error);
+                addTerminalLine('❌ Connection error: ' + error.message);
+            });
+
+            // Bot status updates
+            socket.on('bot_status', function(data) {
+                updateBotStatus(data);
+            });
+
+            // Chat messages
+            socket.on('chat_message', function(data) {
+                addChatMessage(data.username, data.message, data.type || 'user');
+            });
+
+            // Terminal responses
+            socket.on('terminal_response', function(data) {
+                addTerminalLine(data.message);
+            });
+
+            // Error messages
+            socket.on('error_message', function(data) {
+                addTerminalLine(`❌ Error: ${data.message}`);
+                addChatMessage('ERROR', data.message, 'error');
+            });
+
+            // Command management events
+            socket.on('commands_list', function(data) {
+                console.log('Received commands from server:', data);
+                addTerminalLine('✅ Commands loaded from server');
+                
+                // Convert server format to frontend format
+                botCommands = {};
+                commandEnabled = {};
+                Object.keys(data.commands).forEach(cmd => {
+                    const commandData = data.commands[cmd];
+                    if (typeof commandData === 'string') {
+                        botCommands[cmd] = commandData;
+                    } else if (commandData && commandData.response) {
+                        botCommands[cmd] = commandData.response;
+                    }
+                    // Set enabled state
+                    commandEnabled[cmd] = data.enabled ? data.enabled[cmd] !== false : true;
+                });
+                refreshCommandsList();
+            });
+
+            socket.on('commands_updated', function(data) {
+                console.log('Commands updated:', data);
+                addTerminalLine('🔄 Commands updated by server');
+                
+                // Convert server format to frontend format
+                botCommands = {};
+                commandEnabled = {};
+                Object.keys(data.commands).forEach(cmd => {
+                    const commandData = data.commands[cmd];
+                    if (typeof commandData === 'string') {
+                        botCommands[cmd] = commandData;
+                    } else if (commandData && commandData.response) {
+                        botCommands[cmd] = commandData.response;
+                    }
+                    // Set enabled state
+                    commandEnabled[cmd] = data.enabled ? data.enabled[cmd] !== false : true;
+                });
+                refreshCommandsList();
+            });
+
+            // Command operation success/error handling
+            socket.on('command_deleted', function(data) {
+                addTerminalLine(`✅ Command !${data.name} successfully deleted from server`);
+                // Remove from local state if not already removed
+                if (botCommands[data.name]) {
+                    delete botCommands[data.name];
+                    delete commandEnabled[data.name];
+                    refreshCommandsList();
+                }
+            });
+
+            socket.on('command_saved', function(data) {
+                addTerminalLine(`✅ Command !${data.name} successfully saved to server`);
+                // Update local state
+                botCommands[data.name] = data.response;
+                commandEnabled[data.name] = data.enabled !== false;
+                refreshCommandsList();
+            });
+
+            socket.on('command_toggled', function(data) {
+                addTerminalLine(`✅ Command !${data.name} ${data.enabled ? 'enabled' : 'disabled'} on server`);
+                // Update local state
+                commandEnabled[data.name] = data.enabled;
+                refreshCommandsList();
+            });
+
+            // Settings socket event handlers
+            socket.on('current_settings', function(data) {
+                updateSettingsUI(data);
+            });
+
+            socket.on('setting_updated', function(data) {
+                addTerminalLine(`⚙️ ${data.message}`);
+            });
+
+            socket.on('oauth_url', function(data) {
+                addTerminalLine(`🔗 OAuth URL: ${data.url}`);
+                window.open(data.url, '_blank');
+            });
+
+            socket.on('oauth_success', function(data) {
+                addTerminalLine('✅ OAuth completed successfully!');
+                loadCurrentSettings(); // Refresh settings
+            });
+
+            socket.on('token_test_result', function(data) {
+                const statusElement = document.getElementById('access-token-status');
+                if (data.valid) {
+                    statusElement.textContent = 'Valid';
+                    statusElement.classList.add('valid');
+                    addTerminalLine('✅ Tokens are valid');
+                } else {
+                    statusElement.textContent = 'Invalid';
+                    statusElement.classList.remove('valid');
+                    addTerminalLine('❌ Tokens are invalid');
+                }
+            });
+
+            socket.on('settings_exported', function(data) {
+                const blob = new Blob([JSON.stringify(data.settings, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'aetherra_bot_settings.json';
+                a.click();
+                URL.revokeObjectURL(url);
+                addTerminalLine('📤 Settings exported');
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            const backendStatus = document.getElementById('backend-status');
+            if (connected) {
+                backendStatus.textContent = 'CONNECTED';
+                backendStatus.style.color = '#00ff88';
+            } else {
+                backendStatus.textContent = 'DISCONNECTED';
+                backendStatus.style.color = '#ff4444';
+            }
+        }
+
+        function updateBotStatus(data) {
+            const botStatusElement = document.getElementById('bot-status');
+            if (data.running) {
+                botStatusElement.textContent = 'CONNECTED';
+                botStatusElement.style.color = '#00ff88';
+            } else {
+                botStatusElement.textContent = 'OFFLINE';
+                botStatusElement.style.color = '#ff4444';
+            }
+            
+            document.getElementById('chat-channel').textContent = data.channel || '#-';
+            document.getElementById('messages-sent').textContent = data.messageCount || 0;
+            document.getElementById('ai-status').textContent = data.aiEnabled ? 'ACTIVE' : 'INACTIVE';
+            document.getElementById('active-users').textContent = data.activeUsers || 0;
+
+            botRunning = data.running;
+            updateControlButtons();
+        }
+
+        function updateControlButtons() {
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+
+            startBtn.disabled = botRunning;
+            stopBtn.disabled = !botRunning;
+            messageInput.disabled = !botRunning;
+            sendButton.disabled = !botRunning;
+
+            if (botRunning) {
+                startBtn.textContent = 'RUNNING';
+                startBtn.classList.add('active');
+            } else {
+                startBtn.textContent = 'START BOT';
+                startBtn.classList.remove('active');
+            }
+        }
+
+        function addChatMessage(sender, message, type = 'user') {
+            const chatContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message msg-${type}`;
+
+            const time = new Date().toLocaleTimeString();
+            messageDiv.innerHTML = `
+                <span class="message-time">${time}</span>
+                <span class="message-sender">[${sender}]</span>
+                ${message}
+            `;
+
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+
+            // Keep only last 100 messages
+            const messages = chatContainer.querySelectorAll('.chat-message');
+            if (messages.length > 100) {
+                messages[0].remove();
+            }
+
+            chatMessages.push({sender, message, type, time});
+        }
+
+        function addTerminalLine(text) {
+            const terminal = document.getElementById('control-terminal');
+            const line = document.createElement('div');
+            line.className = 'terminal-line';
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            terminal.appendChild(line);
+            terminal.scrollTop = terminal.scrollHeight;
+
+            // Keep only last 50 lines
+            const lines = terminal.querySelectorAll('.terminal-line');
+            if (lines.length > 50) {
+                lines[0].remove();
+            }
+        }
+
+        // Bot control functions
+        function startBot() {
+            if (isConnected) {
+                socket.emit('start_bot');
+                addTerminalLine('🚀 Starting Twitch bot...');
+            }
+        }
+
+        function stopBot() {
+            if (isConnected) {
+                socket.emit('stop_bot');
+                addTerminalLine('⏹️ Stopping Twitch bot...');
+            }
+        }
+
+        function restartBot() {
+            if (isConnected) {
+                socket.emit('restart_bot');
+                addTerminalLine('🔄 Restarting Twitch bot...');
+            }
+        }
+
+        function getStatus() {
+            if (isConnected) {
+                socket.emit('get_bot_status');
+                addTerminalLine('📊 Requesting bot status...');
+            }
+        }
+
+        function requestBotStatus() {
+            if (isConnected) {
+                socket.emit('get_bot_status');
+            }
+        }
+
+        function requestBotCommands() {
+            if (isConnected) {
+                socket.emit('get_commands');
+            }
+        }
+
+        // Chat functions
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (message && isConnected && botRunning) {
+                socket.emit('send_message', {message: message});
+                addChatMessage('YOU', message, 'user');
+                input.value = '';
+                messageCount++;
+                addTerminalLine(`📤 Sent: ${message}`);
+            }
+        }
+
+        function exportChat() {
+            const data = {
+                timestamp: new Date().toISOString(),
+                messages: chatMessages
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `aetherra-chat-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            addTerminalLine('💾 Chat log exported');
+        }
+
+        // Event listeners
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Settings listeners
+        document.getElementById('response-chance').addEventListener('input', function(e) {
+            document.getElementById('chance-value').textContent = Math.round(e.target.value * 100) + '%';
+            if (isConnected) {
+                socket.emit('update_setting', {key: 'response_chance', value: parseFloat(e.target.value)});
+            }
+        });
+
+        // Settings Management Functions
+        function loadCurrentSettings() {
+            if (!isConnected) return;
+            
+            socket.emit('get_current_settings');
+        }
+
+        function updateSetting(key, value) {
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            socket.emit('update_setting', {
+                key: key,
+                value: value
+            });
+        }
+
+        function updateCredential(key, value) {
+            if (!value.trim()) {
+                addTerminalLine('❌ Credential cannot be empty');
+                return;
+            }
+
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            socket.emit('update_credential', {
+                key: key,
+                value: value
+            });
+
+            // Clear the input after sending
+            document.getElementById(key.replace('_', '-')).value = '';
+            addTerminalLine(`🔑 Updated ${key.replace('_', ' ')}`);
+        }
+
+        function updateAISetting(key, value) {
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            // Update the range value display
+            if (key === 'response_chance') {
+                const valueDisplay = document.querySelector('#response-chance').parentNode.querySelector('.range-value');
+                valueDisplay.textContent = Math.round(value * 100) + '%';
+            }
+
+            socket.emit('update_setting', {
+                key: key,
+                value: value
+            });
+        }
+
+        function toggleAISetting(key) {
+            const toggle = document.getElementById(key + '-toggle');
+            const label = toggle.parentNode.querySelector('.toggle-label');
+            
+            const isEnabled = toggle.classList.contains('enabled');
+            
+            if (isEnabled) {
+                toggle.classList.remove('enabled');
+                label.textContent = 'OFF';
+            } else {
+                toggle.classList.add('enabled');
+                label.textContent = 'ON';
+            }
+
+            socket.emit('update_setting', {
+                key: key.replace('-', '_'),
+                value: !isEnabled
+            });
+        }
+
+        function toggleCredentialVisibility(elementId) {
+            const input = document.getElementById(elementId);
+            const button = input.parentNode.querySelector('.show-btn');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+
+        function startOAuthFlow() {
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            addTerminalLine('🔑 Starting OAuth flow...');
+            socket.emit('start_oauth_flow');
+        }
+
+        function testTokens() {
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            addTerminalLine('🧪 Testing OAuth tokens...');
+            socket.emit('test_oauth_tokens');
+        }
+
+        function saveAllSettings() {
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            addTerminalLine('💾 Saving all settings...');
+            socket.emit('save_all_settings');
+        }
+
+        function resetSettings() {
+            if (!confirm('Are you sure you want to reset all settings to defaults?')) {
+                return;
+            }
+
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            addTerminalLine('🔄 Resetting settings...');
+            socket.emit('reset_settings');
+        }
+
+        function exportSettings() {
+            if (!isConnected) {
+                addTerminalLine('❌ Not connected to server');
+                return;
+            }
+
+            addTerminalLine('📤 Exporting settings...');
+            socket.emit('export_settings');
+        }
+
+        function importSettings() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const settings = JSON.parse(e.target.result);
+                        if (!isConnected) {
+                            addTerminalLine('❌ Not connected to server');
+                            return;
+                        }
+
+                        addTerminalLine('📥 Importing settings...');
+                        socket.emit('import_settings', { settings: settings });
+                    } catch (error) {
+                        addTerminalLine('❌ Invalid settings file');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function updateSettingsUI(settings) {
+            // Update input values
+            if (settings.channel) {
+                document.getElementById('twitch-channel').value = settings.channel;
+            }
+            if (settings.username) {
+                document.getElementById('bot-username').value = settings.username;
+            }
+            if (settings.command_prefix) {
+                document.getElementById('command-prefix').value = settings.command_prefix;
+            }
+
+            // Update credential fields with actual values (masked)
+            if (settings.client_id) {
+                document.getElementById('client-id').value = settings.client_id;
+                document.getElementById('client-id').placeholder = 'Client ID Set';
+            }
+            if (settings.client_secret) {
+                document.getElementById('client-secret').value = settings.client_secret;
+                document.getElementById('client-secret').placeholder = 'Client Secret Set';
+            }
+            if (settings.access_token) {
+                document.getElementById('access-token').value = settings.access_token;
+                document.getElementById('access-token').placeholder = 'Access Token Set';
+            }
+            if (settings.refresh_token) {
+                document.getElementById('refresh-token').value = settings.refresh_token;
+                document.getElementById('refresh-token').placeholder = 'Refresh Token Set';
+            }
+
+            // Update AI settings
+            if (settings.ai_responses !== undefined) {
+                const toggle = document.getElementById('ai-responses-toggle');
+                const label = toggle.parentNode.querySelector('.toggle-label');
+                if (settings.ai_responses) {
+                    toggle.classList.add('enabled');
+                    label.textContent = 'ON';
+                } else {
+                    toggle.classList.remove('enabled');
+                    label.textContent = 'OFF';
+                }
+            }
+
+            if (settings.response_chance !== undefined) {
+                const rangeInput = document.getElementById('response-chance');
+                const valueDisplay = rangeInput.parentNode.querySelector('.range-value');
+                rangeInput.value = settings.response_chance;
+                valueDisplay.textContent = Math.round(settings.response_chance * 100) + '%';
+            }
+
+            // Update token status
+            const accessTokenStatus = document.getElementById('access-token-status');
+            const refreshTokenStatus = document.getElementById('refresh-token-status');
+            
+            if (settings.has_access_token) {
+                accessTokenStatus.textContent = 'Set';
+                accessTokenStatus.classList.add('valid');
+            } else {
+                accessTokenStatus.textContent = 'Not Set';
+                accessTokenStatus.classList.remove('valid');
+            }
+
+            if (settings.has_refresh_token) {
+                refreshTokenStatus.textContent = 'Set';
+                refreshTokenStatus.classList.add('valid');
+            } else {
+                refreshTokenStatus.textContent = 'Not Set';
+                refreshTokenStatus.classList.remove('valid');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            initializeConnection();
+            refreshCommandsList(); // Initialize commands list
+        });
+    </script>
+</body>
+
+</html>

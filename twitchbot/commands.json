@@ -1,0 +1,13 @@
+{
+  "commands": {
+    "hello": "Hello there! Welcome to the stream!",
+    "status": "Bot is running and ready to chat!",
+    "ping": "Pong! Bot is responsive."
+  },
+  "enabled": {
+    "hello": true,
+    "status": true,
+    "ping": true,
+    "test": true
+  }
+}

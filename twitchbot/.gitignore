@@ -1,0 +1,43 @@
+# ===================================================================
+# Aetherra Twitch Bot - .gitignore
+# ===================================================================
+# Sensitive files and directories specific to the twitchbot
+# ===================================================================
+
+# Environment variables with secrets
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+
+# Token files with credentials
+twitch_token.json
+oauth_token.json
+*.token
+
+# Log files
+*.log
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE specific files
+.vscode/settings.json
+.idea/
+
+# Backup files
+*.bak
+*.backup
+*~

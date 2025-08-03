@@ -1,0 +1,27 @@
+# Requirements for Aetherra Twitch Bot
+
+# Core dependencies
+requests>=2.28.0  # Required for OAuth authentication with Twitch API
+python-dotenv>=1.0.0  # For loading environment variables from .env file
+
+# Web interface dependencies
+flask>=2.3.0      # Web framework for bot control interface
+flask-socketio>=5.3.0  # Real-time communication for web interface
+python-socketio>=5.8.0  # Socket.IO implementation for Python
+
+# Optional dependencies for enhanced features:
+# aiohttp>=3.8.0    # For async HTTP requests (if implementing async features)
+
+# Note: The bot uses Python standard library modules for IRC functionality:
+# - socket (for IRC connection)
+# - ssl (for secure connections) 
+# - threading (for async operation)
+# - logging (for logging)
+# - time, datetime (for timing and rate limiting)
+# - random (for random responses)
+# - json (for configuration)
+# - http.server (for OAuth callback)
+# - webbrowser (for OAuth flow)
+
+# The bot will automatically import Aetherra components if available.
+# No additional dependencies are required as it uses the existing Aetherra installation.
